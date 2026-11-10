@@ -12,10 +12,10 @@ def _print_trace(trace: list[dict]) -> None:
         print(f"[{entry['event']}] {entry}")
 
 
-def run_repair(eval_path: str, provider: str) -> int:
+def run_repair(eval_path: str, provider: str, model: str | None = None, temperature: float = 0.0) -> int:
     """Run one repair attempt and print its trace, changed files, and final result."""
     try:
-        service = build_repair_service(provider)
+        service = build_repair_service(provider, model=model, temperature=temperature)
         result = service.repair(eval_path)
     except (UnknownCaseError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -39,7 +39,13 @@ def main(argv: list[str] | None = None) -> int:
     repair_parser = subparsers.add_parser("repair", help="Repair one evals/<case> project")
     repair_parser.add_argument("eval_path", help="Path to the selected project, e.g. evals/arithmetic")
     repair_parser.add_argument(
-        "--provider", default="scripted", choices=["scripted"], help="Model provider to use"
+        "--provider", default="scripted", choices=["scripted", "ollama"], help="Model provider to use"
+    )
+    repair_parser.add_argument(
+        "--model", default=None, help="Model name for --provider ollama (default: $OLLAMA_MODEL or qwen2.5-coder:7b)"
+    )
+    repair_parser.add_argument(
+        "--temperature", type=float, default=0.0, help="Sampling temperature for --provider ollama"
     )
 
     subparsers.add_parser("ui", help="Start the local Gradio web page")
@@ -47,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "repair":
-        return run_repair(args.eval_path, args.provider)
+        return run_repair(args.eval_path, args.provider, args.model, args.temperature)
 
     if args.command == "ui":
         from adapters.gradio_ui import create_demo

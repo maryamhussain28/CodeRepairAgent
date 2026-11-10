@@ -5,7 +5,10 @@ service. core/ never imports from here or from adapters/ directly.
 """
 
 import json
+import os
 
+from adapters.models.ollama import DEFAULT_MODEL as OLLAMA_DEFAULT_MODEL
+from adapters.models.ollama import OllamaClient
 from adapters.models.scripted import ScriptedClient
 from adapters.sandbox import runner
 from adapters.sandbox.repair_tools import RepairTools
@@ -138,10 +141,22 @@ def _scripted_client_factory(case_name: str) -> ScriptedClient:
     return ScriptedClient(replies)
 
 
-def build_repair_service(provider: str) -> RepairService:
+def _ollama_client_factory(model: str, temperature: float):
+    """Return a factory that builds one OllamaClient per repair, ignoring case_name."""
+
+    def factory(case_name: str) -> OllamaClient:
+        return OllamaClient(model=model, temperature=temperature)
+
+    return factory
+
+
+def build_repair_service(provider: str, model: str | None = None, temperature: float = 0.0) -> RepairService:
     """Create the RepairService wired to the selected model provider."""
     if provider == "scripted":
         client_factory = _scripted_client_factory
+    elif provider == "ollama":
+        resolved_model = model or os.environ.get("OLLAMA_MODEL", OLLAMA_DEFAULT_MODEL)
+        client_factory = _ollama_client_factory(resolved_model, temperature)
     else:
         raise ValueError(f"unknown provider: {provider}")
 
