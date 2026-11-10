@@ -42,10 +42,18 @@ def main(argv: list[str] | None = None) -> int:
         "--provider", default="scripted", choices=["scripted"], help="Model provider to use"
     )
 
+    subparsers.add_parser("ui", help="Start the local Gradio web page")
+
     args = parser.parse_args(argv)
 
     if args.command == "repair":
         return run_repair(args.eval_path, args.provider)
+
+    if args.command == "ui":
+        from adapters.gradio_ui import create_demo
+
+        create_demo().launch()
+        return 0
 
     parser.error(f"unknown command: {args.command}")
     return 2
